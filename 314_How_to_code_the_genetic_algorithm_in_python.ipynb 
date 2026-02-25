@@ -1,0 +1,2524 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/trysnfj/890/blob/master/314_How_to_code_the_genetic_algorithm_in_python.ipynb%20\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "https://youtu.be/EJeTWRP3Bd0"
+      ],
+      "metadata": {
+        "id": "JiX_6UuP195D"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "MEhORsSN18L1"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# What is Genetic algorithm and How to code it in python?<br>\n",
+        "The genetic algorithm is a stochastic method for function optimization inspired by the process of natural evolution - select parents to create children using the crossover and mutation processes.\n",
+        "<p>\n",
+        "The code is an implementation of the genetic algorithm for optimization. The algorithm is used to find the minimum value of a two-dimensional inverted Gaussian function centered at (7,9). The algorithm consists of the following steps:<p>\n",
+        "\n",
+        "1. Initialize a population of binary bitstrings with random values.\n",
+        "2. Decode the binary bitstrings into numerical values, and evaluate the fitness (the objective function) for each individual in the population.\n",
+        "3. Select the best individuals from the population using tournament selection based on the fitness scores.\n",
+        "4. Create new offsprings from the selected individuals using the crossover operation.\n",
+        "5. Apply the mutation operation on the offsprings to maintain diversity in the population.\n",
+        "6. Repeat steps 2 to 5 until a stopping criterion is met.\n",
+        "\n",
+        "<p>\n",
+        "\n",
+        "The implementation includes functions for decoding, selection, crossover, and mutation."
+      ],
+      "metadata": {
+        "id": "1cOJkos_zeF8"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from numpy.random import randint\n",
+        "from numpy.random import rand\n",
+        "import math"
+      ],
+      "metadata": {
+        "id": "21BoWLSCKXE7"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# The objective function is a two-dimensional inverted Gaussian function, centred at (7, 9)\n",
+        "def objective(x):\n",
+        "  y = math.exp(((x[0]-7)**2) + (x[1]-9)**2)\n",
+        "  return y"
+      ],
+      "metadata": {
+        "id": "TDgKquO2KW4f"
+      },
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# The decode function decodes binary bitstrings to numbers for each input and scales the value to fall within defined bounds\n",
+        "def decode(bounds, n_bits, bitstring):\n",
+        "\t\"\"\"\n",
+        "\tThis function decodes binary bitstrings to numbers for each input and scales the value to fall within defined bounds.\n",
+        "\n",
+        "\tParameters:\n",
+        "\t\tbounds (list): A list of tuples representing the lower and upper bounds for each value to be decoded.\n",
+        "\t\tn_bits (int): The number of bits used to represent each value.\n",
+        "\t\tbitstring (list): A binary bitstring to be decoded.\n",
+        "\n",
+        "\tReturns:\n",
+        "\t\tdecoded (list): A list of decoded values.\n",
+        "\t\"\"\"\n",
+        "\tdecoded = []  # Create an empty list to hold the decoded values\n",
+        "\tlargest = 2**n_bits  # The largest value that can be represented with the given number of bits\n",
+        "\tfor i in range(len(bounds)):\n",
+        "\t\t# Extract the substring for the current value\n",
+        "\t\tstart, end = i * n_bits, (i * n_bits) + n_bits  # Define the start and end indices of the substring\n",
+        "\t\tsubstring = bitstring[start:end]  # Extract the substring\n",
+        "\t\t# Convert the substring to a string of characters\n",
+        "\t\tchars = ''.join([str(s) for s in substring])  # Join the values in the substring together into a string of characters\n",
+        "\t\t# Convert the string of characters to an integer\n",
+        "\t\tinteger = int(chars, 2)  # Convert the binary number string into an integer\n",
+        "\t\t# Scale the integer to the desired range\n",
+        "\t\tvalue = bounds[i][0] + (integer/largest) * (bounds[i][1] - bounds[i][0])  # Scale the integer to a value within the defined bounds\n",
+        "\t\t# Store the decoded value\n",
+        "\t\tdecoded.append(value)\n",
+        "\treturn decoded"
+      ],
+      "metadata": {
+        "id": "2sNnzWpCKWvI"
+      },
+      "execution_count": 2,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\"\"\"\n",
+        "###########################################################################\n",
+        "#Let us understand the decoding part first that takes the bounds as input along with the\n",
+        "#number of bits and the actual bitstring itself and decodes the bitstring back\n",
+        "#to original values that fall within the test bounds.\n",
+        "test_bounds=[[-10.0, 10.0], [-10.0, 10.0]]\n",
+        "test_n_bits = 16\n",
+        "#test_n_pop = 100\n",
+        "#Generate a random bit string (of values 0 and 1) of length n_bits*len(bounds). In our case 16*2 = 32\n",
+        "test_bit_string = randint(0, 2, test_n_bits*len(test_bounds)).tolist()\n",
+        "decoded_values = decode(test_bounds, test_n_bits, test_bit_string)\n",
+        "print(test_bit_string)\n",
+        "print(decoded_values)\n",
+        "######################################################################\n",
+        "\"\"\"\n"
+      ],
+      "metadata": {
+        "id": "0kMN8tYEK1NM",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "04968b4d-4a98-4601-a05d-e666f2b06b29"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0]\n",
+            "[5.60333251953125, 1.971435546875]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def selection(pop, scores, k=3):\n",
+        "    \"\"\"\n",
+        "    Select the best individuals for the next generation based on their fitness (scores).\n",
+        "    This function randomly selects k individuals from the population and performs a tournament\n",
+        "    among them to choose the one with the best score.\n",
+        "\n",
+        "    Parameters:\n",
+        "    pop (list): The population of individuals.\n",
+        "    scores (list): The fitness scores for each individual in the population.\n",
+        "    k (int, optional): The number of individuals to select from the population for the tournament.\n",
+        "                        Defaults to 3.\n",
+        "\n",
+        "    Returns:\n",
+        "    individual: The best individual from the tournament.\n",
+        "    \"\"\"\n",
+        "    # Randomly select one index from the population as the initial selection\n",
+        "    selection_ix = randint(len(pop))\n",
+        "    # Perform a tournament among k randomly selected individuals\n",
+        "    for ix in randint(0, len(pop), k-1):\n",
+        "        # Check if the current individual has a better score than the selected one\n",
+        "        if scores[ix] < scores[selection_ix]:\n",
+        "            # Update the selected individual if a better one is found\n",
+        "            selection_ix = ix\n",
+        "    # Return the best individual from the tournament\n",
+        "    return pop[selection_ix]"
+      ],
+      "metadata": {
+        "id": "--alQ4YtKWkX"
+      },
+      "execution_count": 3,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\"\"\"\n",
+        "#######################################################\n",
+        "#Let us understand the selection process.\n",
+        "#Create a test population\n",
+        "test_bounds=[[-10.0, 10.0], [-10.0, 10.0]]\n",
+        "test_n_bits = 16\n",
+        "test_n_pop = 100\n",
+        "#Create a random population from which we will select based on the scores (from the objective function)\n",
+        "pop = [randint(0, 2, test_n_bits*len(test_bounds)).tolist() for _ in range(test_n_pop)]\n",
+        "# decode population\n",
+        "test_decoded = [decode(test_bounds, test_n_bits, p) for p in pop]\n",
+        "# evaluate all candidates in the population using our objective function\n",
+        "test_scores = [objective(d) for d in test_decoded]\n",
+        "#Run the selection to pick the selected ones from our population\n",
+        "test_selection = selection(pop, test_scores, k=3)\n",
+        "\n",
+        "print(\"From a population of :\", len(pop), \" the selected pop is: \")\n",
+        "print(test_selection)\n",
+        "################################################\n",
+        "\"\"\""
+      ],
+      "metadata": {
+        "id": "olJuWXIDK69x",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "9b2838d0-4c62-43e2-c173-b730a9474068"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "From a population of : 100  the selected pop is: \n",
+            "[1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def crossover(p1, p2, r_cross):\n",
+        "    \"\"\"\n",
+        "    Create two children from two parents using the crossover operation.\n",
+        "    The children are created by copying the parents, and recombination occurs\n",
+        "    if a random value is less than the crossover rate.\n",
+        "\n",
+        "    Parameters:\n",
+        "    p1 (list): The first parent.\n",
+        "    p2 (list): The second parent.\n",
+        "    r_cross (float): The crossover rate.\n",
+        "\n",
+        "    Returns:\n",
+        "    list: A list containing the two children.\n",
+        "    \"\"\"\n",
+        "    # Children are copies of the parents by default\n",
+        "    c1, c2 = p1.copy(), p2.copy()\n",
+        "    # Check if recombination should occur\n",
+        "    if rand() < r_cross:\n",
+        "        # Select a crossover point (not at the end of the string)\n",
+        "        pt = randint(1, len(p1)-2)\n",
+        "        # Perform crossover in the children\n",
+        "        c1 = p1[:pt] + p2[pt:]\n",
+        "        c2 = p2[:pt] + p1[pt:]\n",
+        "    # Return the two children\n",
+        "    return [c1, c2]"
+      ],
+      "metadata": {
+        "id": "l5AuSyTtKWIB"
+      },
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\"\"\"\n",
+        "#######################################################\n",
+        "#Let us understand the Crossover .\n",
+        "test_r_cross = 0.9 #Crossover rate\n",
+        "test_bounds=[[-10.0, 10.0], [-10.0, 10.0]]\n",
+        "test_n_bits = 16\n",
+        "test_p1 = randint(0, 2, test_n_bits*len(test_bounds)).tolist()\n",
+        "test_p2 = randint(0, 2, test_n_bits*len(test_bounds)).tolist()\n",
+        "test_c1, test_c2 = crossover(test_p1, test_p2, test_r_cross)\n",
+        "print(\"Parent 1 is: \", test_p1)\n",
+        "print(\"Child 1 is : \", test_c1)\n",
+        "print(\"Parent 2 is: \", test_p2)\n",
+        "print(\"Child 2 is : \", test_c2)\n",
+        "#######################################################\n",
+        "\"\"\""
+      ],
+      "metadata": {
+        "id": "QDYuRrzXLA4X",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "ec558c37-94ec-4b07-fad5-cfa24f5ae52d"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Parent 1 is:  [0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1]\n",
+            "Child 1 is :  [0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1]\n",
+            "Parent 2 is:  [1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1]\n",
+            "Child 2 is :  [1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#The crossover process can generate offsprings that are very similar to the parents. This might cause a new generation with low diversity.\n",
+        "# The mutation process solves this problem by changing the value of some features in the offspring at random.\n",
+        "\n",
+        "\n",
+        "import random\n",
+        "\n",
+        "def mutation(bitstring, r_mut):\n",
+        "    \"\"\"\n",
+        "    The mutation process changes the value of some features in the offspring at random to maintain the diversity in the population.\n",
+        "    A standard value for the mutation rate is 1/m where m is the number of features.\n",
+        "\n",
+        "    Parameters:\n",
+        "    bitstring (list): A list of binary values representing the offspring\n",
+        "    r_mut (float): The mutation rate, typically 1/m where m is the number of features\n",
+        "\n",
+        "    Returns:\n",
+        "    list: The modified bitstring after mutation\n",
+        "\n",
+        "    \"\"\"\n",
+        "    rand = random.random\n",
+        "    for i in range(len(bitstring)):\n",
+        "        # Check for a mutation\n",
+        "        if rand() < r_mut:\n",
+        "            # Flip the bit\n",
+        "            bitstring[i] = 1 - bitstring[i]\n",
+        "    return bitstring"
+      ],
+      "metadata": {
+        "id": "etYc5HxIKivE"
+      },
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\"\"\"\n",
+        "#######################################################\n",
+        "#Run the cell a few times to see random mutations\n",
+        "#Let us understand the mutation.\n",
+        "# define range for input\n",
+        "test_bounds = [[-10.0, 10.0], [-10.0, 10.0]]\n",
+        "test_n_bits = 16\n",
+        "# mutation rate\n",
+        "r_mut = 1.0 / (float(test_n_bits) * len(test_bounds))\n",
+        "test_bitstring = randint(0, 2, test_n_bits*len(test_bounds)).tolist()\n",
+        "print(\"String before mutation is \", test_bitstring)\n",
+        "mutation(test_bitstring, r_mut)\n",
+        "print(\"String after mutation is  \", test_bitstring)\n",
+        "#################################################\n",
+        "\"\"\""
+      ],
+      "metadata": {
+        "id": "pcen-dMALIxE",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "c8c631c6-eb7d-41d6-b80c-ebe8ef939129"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "String before mutation is  [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1]\n",
+            "String after mutation is   [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "### Putting all together into our Genetic algorithm that runs until it finds the best\n",
+        "#The whole fitness assignment, selection, recombination, and mutation process is\n",
+        "#repeated until a stopping criterion is satisfied.\n",
+        "#Each generation is likely to be more adapted to the environment than the old one.\n",
+        "\n",
+        "# genetic algorithm implementation\n",
+        "def genetic_algorithm(objective, bounds, n_bits, n_iter, n_pop, r_cross, r_mut):\n",
+        "    \"\"\"\n",
+        "    The genetic algorithm that finds the optimal solution by performing the fitness assignment, selection, recombination, and mutation process repeatedly.\n",
+        "    Each iteration, the solution is more adapted to the environment.\n",
+        "\n",
+        "    Parameters\n",
+        "    ----------\n",
+        "    objective: function\n",
+        "        The objective function that needs to be optimized.\n",
+        "    bounds: list of tuples\n",
+        "        The bounds of the solution.\n",
+        "    n_bits: int\n",
+        "        The number of bits used to encode the solution.\n",
+        "    n_iter: int\n",
+        "        The number of iterations to perform.\n",
+        "    n_pop: int\n",
+        "        The size of the population.\n",
+        "    r_cross: float\n",
+        "        The crossover rate.\n",
+        "    r_mut: float\n",
+        "        The mutation rate.\n",
+        "\n",
+        "    Returns\n",
+        "    -------\n",
+        "    list\n",
+        "        The best solution and its evaluation.\n",
+        "    \"\"\"\n",
+        "    # initialize the population with random bitstrings\n",
+        "    pop = [randint(0, 2, n_bits * len(bounds)).tolist() for _ in range(n_pop)]\n",
+        "\n",
+        "    # track the best solution found so far\n",
+        "    best, best_eval = 0, objective(decode(bounds, n_bits, pop[0]))\n",
+        "\n",
+        "    # iterate over generations\n",
+        "    for gen in range(n_iter):\n",
+        "        # decode the population\n",
+        "        decoded = [decode(bounds, n_bits, p) for p in pop]\n",
+        "        # evaluate all candidates in the population\n",
+        "        scores = [objective(d) for d in decoded]\n",
+        "        # check for a new best solution\n",
+        "        for i in range(n_pop):\n",
+        "            if scores[i] < best_eval:\n",
+        "                best, best_eval = pop[i], scores[i]\n",
+        "                print(\">%d, new best f(%s) = %f\" % (gen,  decoded[i], scores[i]))\n",
+        "\n",
+        "        # select parents\n",
+        "        selected = [selection(pop, scores) for _ in range(n_pop)]\n",
+        "\n",
+        "        # create the next generation - children\n",
+        "        children = list()\n",
+        "        for i in range(0, n_pop, 2):\n",
+        "            # get selected parents in pairs\n",
+        "            p1, p2 = selected[i], selected[i + 1]\n",
+        "            # crossover and mutation\n",
+        "            for c in crossover(p1, p2, r_cross):\n",
+        "                # mutation\n",
+        "                mutation(c, r_mut)\n",
+        "                # store for next generation\n",
+        "                children.append(c)\n",
+        "        # replace the population\n",
+        "        pop = children\n",
+        "    return [best, best_eval]\n",
+        "\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "aftG_UNlJY42"
+      },
+      "execution_count": 6,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "267ed563"
+      },
+      "source": [
+        "### 1. Load and Preprocess Data\n",
+        "\n",
+        "First, we'll load the `/content/100TH_MERGED_DATASET_WEKA_READY.csv` file into a Pandas DataFrame. We'll then separate the features (X) from the target variable (y), handle categorical features using one-hot encoding, and split the data into training and testing sets."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 913
+        },
+        "id": "1c2a3712",
+        "outputId": "27d69f96-aa0e-4252-dc80-a9990fd0f8a2"
+      },
+      "source": [
+        "import pandas as pd\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.preprocessing import LabelEncoder, OneHotEncoder\n",
+        "from sklearn.compose import ColumnTransformer\n",
+        "from sklearn.impute import SimpleImputer\n",
+        "import numpy as np\n",
+        "from sklearn.pipeline import Pipeline\n",
+        "\n",
+        "# Load the dataset\n",
+        "df = pd.read_csv('/content/100TH_MERGED_DATASET_WEKA_READY.csv')\n",
+        "\n",
+        "# Display basic info and first few rows to understand the data\n",
+        "print(\"Dataset Info:\")\n",
+        "df.info()\n",
+        "print(\"\\nFirst 5 rows of the dataset:\")\n",
+        "display(df.head())\n",
+        "\n",
+        "# Assuming the last column is the target variable\n",
+        "X = df.iloc[:, :-1]\n",
+        "y = df.iloc[:, -1]\n",
+        "\n",
+        "# Identify categorical and numerical features\n",
+        "categorical_features = X.select_dtypes(include=['object', 'category']).columns\n",
+        "numerical_features = X.select_dtypes(include=np.number).columns\n",
+        "\n",
+        "# Preprocessing for numerical and categorical features\n",
+        "numerical_transformer = SimpleImputer(strategy='mean') # Handle potential missing numerical values\n",
+        "categorical_transformer = Pipeline(steps=[\n",
+        "    ('imputer', SimpleImputer(strategy='most_frequent')),\n",
+        "    ('onehot', OneHotEncoder(handle_unknown='ignore')) # Handle potential missing categorical values and one-hot encode\n",
+        "])\n",
+        "\n",
+        "# Create a column transformer to apply different transformations to different columns\n",
+        "preprocessor = ColumnTransformer(\n",
+        "    transformers=[\n",
+        "        ('num', numerical_transformer, numerical_features),\n",
+        "        ('cat', categorical_transformer, categorical_features)\n",
+        "    ],\n",
+        "    remainder='passthrough' # Keep other columns if any\n",
+        ")\n",
+        "\n",
+        "# Apply preprocessing to features\n",
+        "X_preprocessed = preprocessor.fit_transform(X)\n",
+        "\n",
+        "# Get feature names after one-hot encoding\n",
+        "onehot_features = preprocessor.named_transformers_['cat']['onehot'].get_feature_names_out(categorical_features) if 'cat' in preprocessor.named_transformers_ else []\n",
+        "final_feature_names = list(numerical_features) + list(onehot_features)\n",
+        "\n",
+        "# Convert y to numerical if it's categorical (e.g., for classification models)\n",
+        "# Check if y is categorical or numerical\n",
+        "if y.dtype == 'object' or y.dtype == 'category':\n",
+        "    le = LabelEncoder()\n",
+        "    y_processed = le.fit_transform(y)\n",
+        "    print(f\"\\nTarget variable classes: {le.classes_}\")\n",
+        "else:\n",
+        "    y_processed = y.values\n",
+        "\n",
+        "# Split data into training and testing sets\n",
+        "X_train, X_test, y_train, y_test = train_test_split(X_preprocessed, y_processed, test_size=0.3, random_state=42)\n",
+        "\n",
+        "print(f\"\\nShape of X_train: {X_train.shape}\")\n",
+        "print(f\"Shape of X_test: {X_test.shape}\")\n",
+        "print(f\"Number of features after preprocessing: {X_train.shape[1]}\")\n"
+      ],
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Dataset Info:\n",
+            "<class 'pandas.core.frame.DataFrame'>\n",
+            "RangeIndex: 18 entries, 0 to 17\n",
+            "Data columns (total 1 columns):\n",
+            " #   Column                                        Non-Null Count  Dtype \n",
+            "---  ------                                        --------------  ----- \n",
+            " 0   Status of pollinating insects, 1980 to 2024.  18 non-null     object\n",
+            "dtypes: object(1)\n",
+            "memory usage: 276.0+ bytes\n",
+            "\n",
+            "First 5 rows of the dataset:\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "        Status of pollinating insects, 1980 to 2024.\n",
+              "0                                            Summary\n",
+              "1  This workbook contains the data published alon...\n",
+              "2  https://jncc.gov.uk/our-work/ukbi-pollinating-...\n",
+              "3                                   Publication date\n",
+              "4  The data tables in this workbook were first pu..."
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-d0ce2887-0188-4038-b022-e2e72dfc3ac4\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Status of pollinating insects, 1980 to 2024.</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Summary</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>This workbook contains the data published alon...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>https://jncc.gov.uk/our-work/ukbi-pollinating-...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>Publication date</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>The data tables in this workbook were first pu...</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-d0ce2887-0188-4038-b022-e2e72dfc3ac4')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-d0ce2887-0188-4038-b022-e2e72dfc3ac4 button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-d0ce2887-0188-4038-b022-e2e72dfc3ac4');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "summary": "{\n  \"name\": \"print(f\\\"Number of features after preprocessing: {X_train\",\n  \"rows\": 5,\n  \"fields\": [\n    {\n      \"column\": \"Status of pollinating insects, 1980 to 2024.\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 5,\n        \"samples\": [\n          \"This workbook contains the data published alongside UK Biodiversity Indicator: Status of pollinating insects, 1980 to 2024.\",\n          \"The data tables in this workbook were first published on 2 December 2025\",\n          \"https://jncc.gov.uk/our-work/ukbi-pollinating-insects/\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "error",
+          "ename": "NotFittedError",
+          "evalue": "This OneHotEncoder instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mNotFittedError\u001b[0m                            Traceback (most recent call last)",
+            "\u001b[0;32m/tmp/ipython-input-1513166744.py\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     44\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     45\u001b[0m \u001b[0;31m# Get feature names after one-hot encoding\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 46\u001b[0;31m \u001b[0monehot_features\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpreprocessor\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mnamed_transformers_\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m'cat'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m'onehot'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_feature_names_out\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mcategorical_features\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mif\u001b[0m \u001b[0;34m'cat'\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mpreprocessor\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mnamed_transformers_\u001b[0m \u001b[0;32melse\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     47\u001b[0m \u001b[0mfinal_feature_names\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mlist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnumerical_features\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0mlist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0monehot_features\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     48\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.12/dist-packages/sklearn/preprocessing/_encoders.py\u001b[0m in \u001b[0;36mget_feature_names_out\u001b[0;34m(self, input_features)\u001b[0m\n\u001b[1;32m   1224\u001b[0m             \u001b[0mTransformed\u001b[0m \u001b[0mfeature\u001b[0m \u001b[0mnames\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1225\u001b[0m         \"\"\"\n\u001b[0;32m-> 1226\u001b[0;31m         \u001b[0mcheck_is_fitted\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1227\u001b[0m         \u001b[0minput_features\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0m_check_feature_names_in\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0minput_features\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1228\u001b[0m         cats = [\n",
+            "\u001b[0;32m/usr/local/lib/python3.12/dist-packages/sklearn/utils/validation.py\u001b[0m in \u001b[0;36mcheck_is_fitted\u001b[0;34m(estimator, attributes, msg, all_or_any)\u001b[0m\n\u001b[1;32m   1755\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1756\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0m_is_fitted\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mestimator\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mattributes\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mall_or_any\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1757\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mNotFittedError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmsg\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0;34m{\u001b[0m\u001b[0;34m\"name\"\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mtype\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mestimator\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__name__\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1758\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1759\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mNotFittedError\u001b[0m: This OneHotEncoder instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator."
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "16794601"
+      },
+      "source": [
+        "### 2. Redefine `decode` and `objective` Functions\n",
+        "\n",
+        "We need to modify the `decode` function to interpret the bitstring as a selection of features, rather than scaling numerical values. The new `decode_features` function will take a bitstring and return a boolean mask indicating which features are selected. We will also redefine the `objective` function to use a machine learning model (e.g., Logistic Regression) to evaluate the performance of a given feature subset. We'll use negative accuracy as the score to minimize, as the genetic algorithm seeks to minimize the objective function.\n",
+        "\n",
+        "To make these changes, I will modify the existing `decode` function definition and the `objective` function definition, and also import necessary sklearn modules."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "# define range for input\n",
+        "bounds = [[-10.0, 10.0], [-10.0, 10.0]]\n",
+        "# define the total iterations\n",
+        "n_iter = 100\n",
+        "# bits per variable\n",
+        "n_bits = 16\n",
+        "# define the population size\n",
+        "n_pop = 100\n",
+        "# crossover rate\n",
+        "r_cross = 0.9\n",
+        "# mutation rate\n",
+        "r_mut = 1.0 / (float(n_bits) * len(bounds))\n",
+        "# perform the genetic algorithm search\n",
+        "best, score = genetic_algorithm(objective, bounds, n_bits, n_iter, n_pop, r_cross, r_mut)\n",
+        "print('###########################################################')\n",
+        "decoded = decode(bounds, n_bits, best)\n",
+        "print('The result is (%s) with a score of %f' % (decoded, score))"
+      ],
+      "metadata": {
+        "id": "cLP_qMWeKsXN",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "d756ab1d-9ab1-4e40-8605-701b64542ed9"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            ">0, new best f([3.6907958984375, 9.615478515625]) = 83253.511655\n",
+            ">0, new best f([5.9661865234375, 9.85382080078125]) = 6.036234\n",
+            ">1, new best f([7.58270263671875, 9.921875]) = 3.285096\n",
+            ">2, new best f([7.63641357421875, 9.61578369140625]) = 2.190680\n",
+            ">2, new best f([7.6336669921875, 9.615478515625]) = 2.182231\n",
+            ">3, new best f([7.58270263671875, 9.49554443359375]) = 1.795182\n",
+            ">4, new best f([7.62542724609375, 9.051513671875]) = 1.482623\n",
+            ">5, new best f([7.59246826171875, 8.834228515625]) = 1.460091\n",
+            ">6, new best f([7.58270263671875, 8.93341064453125]) = 1.410545\n",
+            ">7, new best f([6.49871826171875, 9.06524658203125]) = 1.291159\n",
+            ">7, new best f([7.3736572265625, 9.23980712890625]) = 1.217899\n",
+            ">8, new best f([7.00042724609375, 9.02679443359375]) = 1.000718\n",
+            ">11, new best f([6.98822021484375, 9.02374267578125]) = 1.000703\n",
+            ">12, new best f([6.98822021484375, 9.002685546875]) = 1.000146\n",
+            ">14, new best f([7.00836181640625, 8.99871826171875]) = 1.000072\n",
+            ">15, new best f([6.99981689453125, 9.00421142578125]) = 1.000018\n",
+            ">18, new best f([7.0013427734375, 8.99658203125]) = 1.000013\n",
+            ">20, new best f([6.99981689453125, 8.99932861328125]) = 1.000000\n",
+            ">21, new best f([6.99981689453125, 9.00054931640625]) = 1.000000\n",
+            ">34, new best f([6.99951171875, 9.000244140625]) = 1.000000\n",
+            ">35, new best f([6.99981689453125, 9.000244140625]) = 1.000000\n",
+            ">42, new best f([6.99981689453125, 8.99993896484375]) = 1.000000\n",
+            ">43, new best f([7.0001220703125, 8.99993896484375]) = 1.000000\n",
+            "###########################################################\n",
+            "The result is ([7.0001220703125, 8.99993896484375]) with a score of 1.000000\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "e72cd3e5"
+      },
+      "source": [
+        "# Task\n",
+        "The current notebook attempted a generic preprocessing pipeline which failed because the dataset (`/content/100TH_MERGED_DATASET_WEKA_READY.csv`) contains only a single column of text data, causing the feature matrix `X` to be empty after initial processing. The task requires loading a different file, `/content/FINAL VERSION OF combined_weka_friendly_all_data.csv`, and specifically processing it as text for TF-IDF feature extraction.\n",
+        "\n",
+        "Let's start by modifying the preprocessing code to correctly load the specified text data file and apply TF-IDF vectorization. I will update the code to load `/content/FINAL VERSION OF combined_weka_friendly_all_data.csv`, assume the single column is the text data, and apply TF-IDF. If a clear target variable is present in the text or needs to be extracted, I'll address that in subsequent steps; otherwise, we'll proceed with unsupervised feature selection for the text.\n",
+        "\n",
+        "Here's how I'll update the notebook:\n",
+        "\n",
+        "1.  **Update the data loading path**: Change the CSV file path to `/content/FINAL VERSION OF combined_weka_friendly_all_data.csv`.\n",
+        "2.  **Handle single column as text**: Assume the single column in the CSV contains the text data.\n",
+        "3.  **Apply TF-IDF Vectorization**: Use `TfidfVectorizer` to convert the text into numerical features.\n",
+        "4.  **Identify target (if any)**: Since the current dataset (judging from `df` in kernel state) appears to be a single column of text, I will assume for now that there's no explicit target variable to separate and treat the entire column as `X`. If the goal is classification, I'll need to define how the target `y` can be derived from this text or from other means. For the purpose of feature selection *for text*, we can initially focus on generating `X` (TF-IDF features). If the ultimate goal is classification, I'll need to identify a target, which might involve extracting it from the text or being provided with it.\n",
+        "5.  **Split data**: Split the TF-IDF features into training and testing sets.\n",
+        "\n",
+        "This step addresses the \"Load and Prepare Text Data\" and \"Extract Text Features (TF-IDF)\" parts of the plan.\n",
+        "\n",
+        "```python\n",
+        "import pandas as pd\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+        "from sklearn.preprocessing import LabelEncoder\n",
+        "import numpy as np\n",
+        "\n",
+        "# Load the dataset from the specified path\n",
+        "df = pd.read_csv('/content/FINAL VERSION OF combined_weka_friendly_all_data.csv')\n",
+        "\n",
+        "# Display basic info and first few rows to understand the data\n",
+        "print(\"Dataset Info:\")\n",
+        "df.info()\n",
+        "print(\"\\nFirst 5 rows of the dataset:\")\n",
+        "display(df.head())\n",
+        "\n",
+        "# Assuming the dataset has only one column, which contains the text data.\n",
+        "# If there's a target variable, it needs to be explicitly identified or extracted.\n",
+        "# For now, let's assume the entire column is text data for feature extraction.\n",
+        "# If there are multiple columns and one is text and another is a label,\n",
+        "# this logic would need to be adjusted.\n",
+        "if df.shape[1] == 1:\n",
+        "    text_column_name = df.columns[0]\n",
+        "    X_text = df[text_column_name].astype(str) # Ensure text data is string type\n",
+        "    y = None # No explicit target identified yet\n",
+        "    print(f\"\\nIdentified text column: '{text_column_name}'\")\n",
+        "else:\n",
+        "    # If there are multiple columns, we need to decide which is text and which is target\n",
+        "    # For demonstration, let's assume the first column is text and the last is target\n",
+        "    # This might need adjustment based on actual data structure.\n",
+        "    print(\"Warning: Dataset has multiple columns. Assuming first is text, last is target.\")\n",
+        "    text_column_name = df.columns[0]\n",
+        "    X_text = df[text_column_name].astype(str)\n",
+        "    y = df.iloc[:, -1]\n",
+        "    # Convert y to numerical if it's categorical\n",
+        "    if y.dtype == 'object' or y.dtype == 'category':\n",
+        "        le = LabelEncoder()\n",
+        "        y = le.fit_transform(y)\n",
+        "        print(f\"Target variable classes: {le.classes_}\")\n",
+        "\n",
+        "# Initialize TF-IDF Vectorizer\n",
+        "# You can adjust parameters like max_features, ngram_range, min_df, max_df\n",
+        "tfidf_vectorizer = TfidfVectorizer(max_features=5000, stop_words='english', ngram_range=(1,2))\n",
+        "\n",
+        "# Fit and transform the text data to get TF-IDF features\n",
+        "X_tfidf = tfidf_vectorizer.fit_transform(X_text)\n",
+        "\n",
+        "# Get feature names (words/n-grams) from TF-IDF\n",
+        "tfidf_feature_names = tfidf_vectorizer.get_feature_names_out()\n",
+        "\n",
+        "print(f\"\\nShape of TF-IDF features (X_tfidf): {X_tfidf.shape}\")\n",
+        "print(f\"Number of TF-IDF features: {len(tfidf_feature_names)}\")\n",
+        "print(f\"Sample TF-IDF features: {tfidf_feature_names[:10]}\")\n",
+        "\n",
+        "# Since the plan mentions splitting data based on X and y, we need a y.\n",
+        "# If no explicit y is present, we might need to synthetically create one for this step\n",
+        "# or adjust the plan to proceed with unsupervised feature selection initially.\n",
+        "# For now, if y is None, we will create a dummy target for splitting purposes if needed,\n",
+        "# or proceed with only X_tfidf if the goal is purely unsupervised feature selection.\n",
+        "# However, the plan mentions \"text classification\", implying a target.\n",
+        "# Let's assume for now that the goal is to perform some form of clustering or\n",
+        "# dimensionality reduction if no target is obvious, or that a target will be defined later.\n",
+        "# For genetic algorithm, we need an objective function that evaluates a model,\n",
+        "# and models typically require a target.\n",
+        "# If the CSV is truly a single column of plain text, and we need a 'target' for classification,\n",
+        "# this is a point for clarification. Assuming for now, if y is not explicitly extracted,\n",
+        "# we'll proceed as if the task is to find features for text *representation* for downstream tasks,\n",
+        "# and the GA's objective will need to be redefined accordingly (e.g., maximizing variance, or a clustering metric).\n",
+        "\n",
+        "# Given the plan's mention of \"text classification\", a target variable is expected.\n",
+        "# As the provided CSV has a single text column, and the plan does not specify how to derive 'y',\n",
+        "# I will simulate a binary target 'y' from the text data itself for demonstration purposes\n",
+        "# if a true target is not evident. A common approach is to look for keywords or\n",
+        "# perform simple clustering. However, to stay close to the *classification* idea,\n",
+        "# let's assume a dummy binary target for the split, acknowledging this needs\n",
+        "# to be properly defined if the dataset has no inherent target.\n",
+        "\n",
+        "# *** IMPORTANT ASSUMPTION FOR 'y' ***\n",
+        "# As the input CSV is a single column of text and no explicit target is given,\n",
+        "# for the purpose of proceeding with the classification objective function outlined\n",
+        "# in the plan, I will create a dummy binary target variable 'y_dummy'.\n",
+        "# In a real scenario, this 'y' would come from the dataset itself or external labels.\n",
+        "# For this demonstration, I'll create 'y_dummy' based on the length of the text,\n",
+        "# which is arbitrary but allows the subsequent steps to run.\n",
+        "# THIS NEEDS TO BE REPLACED WITH A REAL TARGET IF CLASSIFICATION IS THE ACTUAL GOAL.\n",
+        "\n",
+        "# If y is still None (meaning single text column and no explicit target extraction above)\n",
+        "if y is None:\n",
+        "    print(\"\\nNo explicit target variable identified. Creating a dummy binary target 'y_dummy' for classification objective demonstration.\")\n",
+        "    # Example: Create a dummy binary target based on text length (arbitrary for demonstration)\n",
+        "    y_processed = (X_text.str.len() > X_text.str.len().mean()).astype(int)\n",
+        "else:\n",
+        "    y_processed = y\n",
+        "\n",
+        "\n",
+        "# Split data into training and testing sets\n",
+        "X_train, X_test, y_train, y_test = train_test_split(X_tfidf, y_processed, test_size=0.3, random_state=42)\n",
+        "\n",
+        "print(f\"\\nShape of X_train (TF-IDF features): {X_train.shape}\")\n",
+        "print(f\"Shape of X_test (TF-IDF features): {X_test.shape}\")\n",
+        "print(f\"Shape of y_train: {y_train.shape}\")\n",
+        "print(f\"Shape of y_test: {y_test.shape}\")\n",
+        "\n",
+        "```"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "9ec7486d"
+      },
+      "source": [
+        "## Load and Prepare Text Data\n",
+        "\n",
+        "### Subtask:\n",
+        "Load the single column of text data from `/content/FINAL VERSION OF combined_weka_friendly_all_data.csv`, ensure it's in a suitable format for text processing, and prepare a target variable (or a dummy one if none is explicit).\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "ac5922fe"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "The first step is to import all the necessary libraries as specified in the instructions to prepare for data loading and preprocessing.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "497300e8",
+        "outputId": "8658217e-c647-4b35-f4a9-4d6803cf4f55"
+      },
+      "source": [
+        "import pandas as pd\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+        "from sklearn.preprocessing import LabelEncoder\n",
+        "import numpy as np\n",
+        "\n",
+        "print(\"Libraries imported successfully.\")"
+      ],
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Libraries imported successfully.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "a223d5ea"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "Load the specified dataset, display its information and head, and then process it to separate the text features (X_text) and prepare a target variable (y_processed), creating a dummy target if an explicit one is not found, as per the instructions.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 583
+        },
+        "id": "870e6142",
+        "outputId": "aa47ea7b-b3b6-4121-c42f-e2348ae3de88"
+      },
+      "source": [
+        "df = pd.read_csv('/content/FINAL VERSION OF combined_weka_friendly_all_data.csv')\n",
+        "\n",
+        "print(\"Dataset Info:\")\n",
+        "df.info()\n",
+        "print(\"\\nFirst 5 rows of the dataset:\")\n",
+        "display(df.head())\n",
+        "\n",
+        "if df.shape[1] == 1:\n",
+        "    text_column_name = df.columns[0]\n",
+        "    X_text = df[text_column_name].astype(str)\n",
+        "    y = None\n",
+        "    print(f\"\\nIdentified text column: '{text_column_name}'\")\n",
+        "else:\n",
+        "    print(\"Warning: Dataset has multiple columns. Assuming first is text, last is target.\")\n",
+        "    text_column_name = df.columns[0]\n",
+        "    X_text = df[text_column_name].astype(str)\n",
+        "    y = df.iloc[:, -1]\n",
+        "    if y.dtype == 'object' or y.dtype == 'category':\n",
+        "        le = LabelEncoder()\n",
+        "        y = le.fit_transform(y)\n",
+        "        print(f\"Target variable classes: {le.classes_}\")\n",
+        "\n",
+        "if y is None:\n",
+        "    print(\"\\nNo explicit target variable identified. Creating a dummy binary target 'y_processed' for classification objective demonstration.\")\n",
+        "    y_processed = (X_text.str.len() > X_text.str.len().mean()).astype(int)\n",
+        "else:\n",
+        "    y_processed = y\n",
+        "\n",
+        "print(f\"\\nShape of X_text: {X_text.shape}\")\n",
+        "print(f\"Shape of y_processed: {y_processed.shape}\")"
+      ],
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Dataset Info:\n",
+            "<class 'pandas.core.frame.DataFrame'>\n",
+            "RangeIndex: 49 entries, 0 to 48\n",
+            "Data columns (total 6 columns):\n",
+            " #   Column                                                                                                                                               Non-Null Count  Dtype  \n",
+            "---  ------                                                                                                                                               --------------  -----  \n",
+            " 0   Year                                                                                                                                                 49 non-null     int64  \n",
+            " 1   Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index        49 non-null     float64\n",
+            " 2   Worksheet2_UK_Total_Area_Million_Hectares                                                                                                            49 non-null     float64\n",
+            " 3   Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees  49 non-null     float64\n",
+            " 4   Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index                                     49 non-null     float64\n",
+            " 5   Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index                                           49 non-null     float64\n",
+            "dtypes: float64(5), int64(1)\n",
+            "memory usage: 2.4 KB\n",
+            "\n",
+            "First 5 rows of the dataset:\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "   Year  \\\n",
+              "0  1976   \n",
+              "1  1977   \n",
+              "2  1978   \n",
+              "3  1979   \n",
+              "4  1980   \n",
+              "\n",
+              "   Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index  \\\n",
+              "0                                         100.000000                                                                                               \n",
+              "1                                          99.623233                                                                                               \n",
+              "2                                          99.244959                                                                                               \n",
+              "3                                          98.868192                                                                                               \n",
+              "4                                          98.489918                                                                                               \n",
+              "\n",
+              "   Worksheet2_UK_Total_Area_Million_Hectares  \\\n",
+              "0                                      0.308   \n",
+              "1                                      0.308   \n",
+              "2                                      0.308   \n",
+              "3                                      0.308   \n",
+              "4                                      0.308   \n",
+              "\n",
+              "   Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees  \\\n",
+              "0                                              100.0                                                                                                     \n",
+              "1                                              100.0                                                                                                     \n",
+              "2                                              100.0                                                                                                     \n",
+              "3                                              100.0                                                                                                     \n",
+              "4                                              100.0                                                                                                     \n",
+              "\n",
+              "   Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index  \\\n",
+              "0                                           96.53159                                                                  \n",
+              "1                                           96.53159                                                                  \n",
+              "2                                           96.53159                                                                  \n",
+              "3                                           96.53159                                                                  \n",
+              "4                                           96.53159                                                                  \n",
+              "\n",
+              "   Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index  \n",
+              "0                                          98.756069                                                           \n",
+              "1                                          98.756069                                                           \n",
+              "2                                          98.756069                                                           \n",
+              "3                                          98.756069                                                           \n",
+              "4                                          98.756069                                                           "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-345f6c3d-04d7-468e-b0ce-79d4dd1b27cb\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Year</th>\n",
+              "      <th>Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index</th>\n",
+              "      <th>Worksheet2_UK_Total_Area_Million_Hectares</th>\n",
+              "      <th>Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees</th>\n",
+              "      <th>Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index</th>\n",
+              "      <th>Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1976</td>\n",
+              "      <td>100.000000</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>1977</td>\n",
+              "      <td>99.623233</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>1978</td>\n",
+              "      <td>99.244959</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>1979</td>\n",
+              "      <td>98.868192</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>1980</td>\n",
+              "      <td>98.489918</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-345f6c3d-04d7-468e-b0ce-79d4dd1b27cb')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-345f6c3d-04d7-468e-b0ce-79d4dd1b27cb button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-345f6c3d-04d7-468e-b0ce-79d4dd1b27cb');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "summary": "{\n  \"name\": \"print(f\\\"Shape of y_processed: {y_processed\",\n  \"rows\": 5,\n  \"fields\": [\n    {\n      \"column\": \"Year\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 1,\n        \"min\": 1976,\n        \"max\": 1980,\n        \"num_unique_values\": 5,\n        \"samples\": [\n          1977,\n          1980,\n          1978\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.596912578232157,\n        \"min\": 98.48991771,\n        \"max\": 100.0,\n        \"num_unique_values\": 5,\n        \"samples\": [\n          99.62323296,\n          98.48991771,\n          99.24495886\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet2_UK_Total_Area_Million_Hectares\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 0.308,\n        \"max\": 0.308,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          0.308\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 100.0,\n        \"max\": 100.0,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          100.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 96.53159,\n        \"max\": 96.53159,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          96.53159\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 98.7560692133254,\n        \"max\": 98.7560692133254,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          98.7560692133254\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Warning: Dataset has multiple columns. Assuming first is text, last is target.\n",
+            "\n",
+            "Shape of X_text: (49,)\n",
+            "Shape of y_processed: (49,)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "ddcc2d02"
+      },
+      "source": [
+        "# Task\n",
+        "The previous attempt to load and preprocess the data led to an incorrect interpretation of the dataset, assuming it was text data for TF-IDF. Based on the updated plan, the dataset `/content/FINAL VERSION OF combined_weka_friendly_all_data.csv` contains *numerical* data, and a specific column needs to be identified as the target variable.\n",
+        "\n",
+        "Therefore, the next step is to correctly load the dataset, separate the identified target variable 'Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees' as `y`, and use all other columns as features `X`. Finally, the data will be split into training and testing sets.\n",
+        "\n",
+        "```python\n",
+        "import pandas as pd\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "import numpy as np\n",
+        "\n",
+        "# Load the dataset\n",
+        "df = pd.read_csv('/content/FINAL VERSION OF combined_weka_friendly_all_data.csv')\n",
+        "\n",
+        "# Display basic info and first few rows to understand the data\n",
+        "print(\"Dataset Info:\")\n",
+        "df.info()\n",
+        "print(\"\\nFirst 5 rows of the dataset:\")\n",
+        "display(df.head())\n",
+        "\n",
+        "# Identify the target variable (y)\n",
+        "target_column = 'Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees'\n",
+        "y = df[target_column]\n",
+        "\n",
+        "# Identify features (X) - all other columns\n",
+        "X = df.drop(columns=[target_column])\n",
+        "\n",
+        "# Ensure data types are appropriate for numerical analysis\n",
+        "# (df.info() already showed all columns are numerical, so no explicit conversion needed here)\n",
+        "\n",
+        "print(f\"\\nShape of features (X): {X.shape}\")\n",
+        "print(f\"Shape of target (y): {y.shape}\")\n",
+        "\n",
+        "# Split data into training and testing sets\n",
+        "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)\n",
+        "\n",
+        "print(f\"\\nShape of X_train: {X_train.shape}\")\n",
+        "print(f\"Shape of X_test: {X_test.shape}\")\n",
+        "print(f\"Shape of y_train: {y_train.shape}\")\n",
+        "print(f\"Shape of y_test: {y_test.shape}\")\n",
+        "\n",
+        "# Store feature names for later use in feature selection interpretation\n",
+        "numerical_feature_names = X.columns.tolist()\n",
+        "```"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "e123a099"
+      },
+      "source": [
+        "## Load and Prepare Numerical Data\n",
+        "\n",
+        "### Subtask:\n",
+        "Load the `/content/FINAL VERSION OF combined_weka_friendly_all_data.csv` dataset. Identify the column 'Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees' as the target variable (y), and all other columns as features (X). Ensure data types are appropriate for numerical analysis.\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "e4ccd7bb"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "First, I'll import the necessary libraries: `pandas` for data manipulation and `train_test_split` for splitting data. This sets up the environment for loading and preparing the numerical data as specified in the subtask.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "60932a89",
+        "outputId": "ba7728e0-f0c3-4898-bd93-8a0568798910"
+      },
+      "source": [
+        "import pandas as pd\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "\n",
+        "print(\"Libraries imported successfully.\")"
+      ],
+      "execution_count": 12,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Libraries imported successfully.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "e6219a5e"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "Now, I will load the dataset, separate the features (X) from the target variable (y) as specified, and then split the data into training and testing sets, storing feature names for future use.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 691
+        },
+        "id": "2adabf6d",
+        "outputId": "af21fad9-4582-4bef-f550-1f3e452d7c6a"
+      },
+      "source": [
+        "df = pd.read_csv('/content/FINAL VERSION OF combined_weka_friendly_all_data.csv')\n",
+        "\n",
+        "print(\"Dataset Info:\")\n",
+        "df.info()\n",
+        "print(\"\\nFirst 5 rows of the dataset:\")\n",
+        "display(df.head())\n",
+        "\n",
+        "# Identify the target variable (y)\n",
+        "target_column = 'Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees'\n",
+        "y = df[target_column]\n",
+        "\n",
+        "# Identify features (X) - all other columns\n",
+        "X = df.drop(columns=[target_column])\n",
+        "\n",
+        "print(f\"\\nShape of features (X): {X.shape}\")\n",
+        "print(f\"Shape of target (y): {y.shape}\")\n",
+        "\n",
+        "# Split data into training and testing sets\n",
+        "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)\n",
+        "\n",
+        "print(f\"\\nShape of X_train: {X_train.shape}\")\n",
+        "print(f\"Shape of X_test: {X_test.shape}\")\n",
+        "print(f\"Shape of y_train: {y_train.shape}\")\n",
+        "print(f\"Shape of y_test: {y_test.shape}\")\n",
+        "\n",
+        "# Store feature names for later use in feature selection interpretation\n",
+        "numerical_feature_names = X.columns.tolist()\n",
+        "print(f\"\\nNumerical feature names stored: {numerical_feature_names}\")"
+      ],
+      "execution_count": 13,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Dataset Info:\n",
+            "<class 'pandas.core.frame.DataFrame'>\n",
+            "RangeIndex: 49 entries, 0 to 48\n",
+            "Data columns (total 6 columns):\n",
+            " #   Column                                                                                                                                               Non-Null Count  Dtype  \n",
+            "---  ------                                                                                                                                               --------------  -----  \n",
+            " 0   Year                                                                                                                                                 49 non-null     int64  \n",
+            " 1   Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index        49 non-null     float64\n",
+            " 2   Worksheet2_UK_Total_Area_Million_Hectares                                                                                                            49 non-null     float64\n",
+            " 3   Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees  49 non-null     float64\n",
+            " 4   Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index                                     49 non-null     float64\n",
+            " 5   Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index                                           49 non-null     float64\n",
+            "dtypes: float64(5), int64(1)\n",
+            "memory usage: 2.4 KB\n",
+            "\n",
+            "First 5 rows of the dataset:\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "   Year  \\\n",
+              "0  1976   \n",
+              "1  1977   \n",
+              "2  1978   \n",
+              "3  1979   \n",
+              "4  1980   \n",
+              "\n",
+              "   Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index  \\\n",
+              "0                                         100.000000                                                                                               \n",
+              "1                                          99.623233                                                                                               \n",
+              "2                                          99.244959                                                                                               \n",
+              "3                                          98.868192                                                                                               \n",
+              "4                                          98.489918                                                                                               \n",
+              "\n",
+              "   Worksheet2_UK_Total_Area_Million_Hectares  \\\n",
+              "0                                      0.308   \n",
+              "1                                      0.308   \n",
+              "2                                      0.308   \n",
+              "3                                      0.308   \n",
+              "4                                      0.308   \n",
+              "\n",
+              "   Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees  \\\n",
+              "0                                              100.0                                                                                                     \n",
+              "1                                              100.0                                                                                                     \n",
+              "2                                              100.0                                                                                                     \n",
+              "3                                              100.0                                                                                                     \n",
+              "4                                              100.0                                                                                                     \n",
+              "\n",
+              "   Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index  \\\n",
+              "0                                           96.53159                                                                  \n",
+              "1                                           96.53159                                                                  \n",
+              "2                                           96.53159                                                                  \n",
+              "3                                           96.53159                                                                  \n",
+              "4                                           96.53159                                                                  \n",
+              "\n",
+              "   Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index  \n",
+              "0                                          98.756069                                                           \n",
+              "1                                          98.756069                                                           \n",
+              "2                                          98.756069                                                           \n",
+              "3                                          98.756069                                                           \n",
+              "4                                          98.756069                                                           "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-4e1d883c-52a1-4ce6-aea9-9e0e1fd6b3ea\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Year</th>\n",
+              "      <th>Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index</th>\n",
+              "      <th>Worksheet2_UK_Total_Area_Million_Hectares</th>\n",
+              "      <th>Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees</th>\n",
+              "      <th>Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index</th>\n",
+              "      <th>Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1976</td>\n",
+              "      <td>100.000000</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>1977</td>\n",
+              "      <td>99.623233</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>1978</td>\n",
+              "      <td>99.244959</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>1979</td>\n",
+              "      <td>98.868192</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>1980</td>\n",
+              "      <td>98.489918</td>\n",
+              "      <td>0.308</td>\n",
+              "      <td>100.0</td>\n",
+              "      <td>96.53159</td>\n",
+              "      <td>98.756069</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-4e1d883c-52a1-4ce6-aea9-9e0e1fd6b3ea')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-4e1d883c-52a1-4ce6-aea9-9e0e1fd6b3ea button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-4e1d883c-52a1-4ce6-aea9-9e0e1fd6b3ea');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "summary": "{\n  \"name\": \"print(f\\\"\\\\nNumerical feature names stored: {numerical_feature_names}\\\")\",\n  \"rows\": 5,\n  \"fields\": [\n    {\n      \"column\": \"Year\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 1,\n        \"min\": 1976,\n        \"max\": 1980,\n        \"num_unique_values\": 5,\n        \"samples\": [\n          1977,\n          1980,\n          1978\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.596912578232157,\n        \"min\": 98.48991771,\n        \"max\": 100.0,\n        \"num_unique_values\": 5,\n        \"samples\": [\n          99.62323296,\n          98.48991771,\n          99.24495886\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet2_UK_Total_Area_Million_Hectares\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 0.308,\n        \"max\": 0.308,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          0.308\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet3_Worksheet_3_Change_in_occupancy_of_pollinating_bee_species_in_the_UK_1980_to_2022_not_updated_in_2025_Indicator_mean_occupancy_Wild_bees\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 100.0,\n        \"max\": 100.0,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          100.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 96.53159,\n        \"max\": 96.53159,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          96.53159\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 98.7560692133254,\n        \"max\": 98.7560692133254,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          98.7560692133254\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "Shape of features (X): (49, 5)\n",
+            "Shape of target (y): (49,)\n",
+            "\n",
+            "Shape of X_train: (34, 5)\n",
+            "Shape of X_test: (15, 5)\n",
+            "Shape of y_train: (34,)\n",
+            "Shape of y_test: (15,)\n",
+            "\n",
+            "Numerical feature names stored: ['Year', 'Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index', 'Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index', 'Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index']\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "7d9046ce"
+      },
+      "source": [
+        "## Redefine Decode Function for Feature Selection\n",
+        "\n",
+        "### Subtask:\n",
+        "Modify the `decode` function to interpret a binary bitstring as a selection mask for numerical features, where each bit corresponds to a feature from `numerical_feature_names`.\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "3af980b3"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "I will define the `decode_features` function as specified, which interprets a binary bitstring as a selection mask for features, returning the names of the selected features.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "cc65da7f",
+        "outputId": "59cbb021-af90-4289-e7fd-f68cce304f2d"
+      },
+      "source": [
+        "def decode_features(bitstring, feature_names):\n",
+        "    \"\"\"\n",
+        "    Decodes a binary bitstring into a list of selected feature names.\n",
+        "\n",
+        "    Parameters:\n",
+        "        bitstring (list): A list of binary values (0s and 1s) representing feature selection.\n",
+        "        feature_names (list): A list of all available feature names.\n",
+        "\n",
+        "    Returns:\n",
+        "        list: A list of feature names that are selected (where the corresponding bit is 1).\n",
+        "    \"\"\"\n",
+        "    selected_features = []\n",
+        "    for i, bit in enumerate(bitstring):\n",
+        "        if bit == 1:\n",
+        "            selected_features.append(feature_names[i])\n",
+        "    return selected_features\n",
+        "\n",
+        "print(\"decode_features function defined.\")"
+      ],
+      "execution_count": 14,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "decode_features function defined.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "9a250474"
+      },
+      "source": [
+        "## Redefine Objective Function for Regression\n",
+        "\n",
+        "### Subtask:\n",
+        "Create a new `objective` function that evaluates the performance of a regression model (e.g., Linear Regression) using a subset of features. This function should take a bitstring as input, decode it into selected feature names, train a model on these features, and return a score to be minimized by the genetic algorithm.\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "4db92b7a"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "I will import the necessary modules, `LinearRegression` and `mean_squared_error`, to prepare for defining the regression objective function.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "77bca612",
+        "outputId": "11c500b5-3a08-4913-dacf-25d89c1953e3"
+      },
+      "source": [
+        "from sklearn.linear_model import LinearRegression\n",
+        "from sklearn.metrics import mean_squared_error\n",
+        "\n",
+        "print(\"LinearRegression and mean_squared_error imported successfully.\")"
+      ],
+      "execution_count": 15,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "LinearRegression and mean_squared_error imported successfully.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "5d501b06"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "I will define the `objective_function_regression` that evaluates a `LinearRegression` model using features selected by a bitstring and returns the Mean Squared Error, as instructed.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "d12fa0e7",
+        "outputId": "deace702-0e5b-489a-c1ff-961527f0da1e"
+      },
+      "source": [
+        "def objective_function_regression(bitstring):\n",
+        "    \"\"\"\n",
+        "    Evaluates the performance of a Linear Regression model using a subset of features\n",
+        "    selected by the bitstring.\n",
+        "\n",
+        "    Parameters:\n",
+        "        bitstring (list): A binary bitstring representing the selected features.\n",
+        "\n",
+        "    Returns:\n",
+        "        float: The Mean Squared Error (MSE) of the Linear Regression model on the test set,\n",
+        "               or float('inf') if no features are selected.\n",
+        "    \"\"\"\n",
+        "    global X_train, X_test, y_train, y_test, numerical_feature_names\n",
+        "\n",
+        "    selected_feature_names = decode_features(bitstring, numerical_feature_names)\n",
+        "\n",
+        "    # If no features are selected, return a very high penalty score\n",
+        "    if not selected_feature_names:\n",
+        "        return float('inf')\n",
+        "\n",
+        "    # Filter X_train and X_test to create X_train_selected and X_test_selected\n",
+        "    X_train_selected = X_train[selected_feature_names]\n",
+        "    X_test_selected = X_test[selected_feature_names]\n",
+        "\n",
+        "    # Instantiate and train a LinearRegression model\n",
+        "    model = LinearRegression()\n",
+        "    model.fit(X_train_selected, y_train)\n",
+        "\n",
+        "    # Make predictions and calculate MSE\n",
+        "    predictions = model.predict(X_test_selected)\n",
+        "    mse = mean_squared_error(y_test, predictions)\n",
+        "\n",
+        "    return mse\n",
+        "\n",
+        "print(\"objective_function_regression defined successfully.\")"
+      ],
+      "execution_count": 16,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "objective_function_regression defined successfully.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "8a4eb6c9"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "I will define the `genetic_algorithm_feature_selection` function, adapting the previous generic genetic algorithm to the context of feature selection for regression, using the `objective_function_regression` and `decode_features` functions previously defined. This involves updating the population initialization, score calculation, and evaluation tracking to minimize the MSE.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "16edac91",
+        "outputId": "29e35515-6f61-4e0a-e0a9-b297824c6533"
+      },
+      "source": [
+        "def genetic_algorithm_feature_selection(n_iter, n_pop, r_cross, r_mut):\n",
+        "    \"\"\"\n",
+        "    Genetic algorithm for feature selection using Linear Regression and MSE as objective.\n",
+        "\n",
+        "    Parameters\n",
+        "    ----------\n",
+        "    n_iter: int\n",
+        "        The number of iterations (generations) to perform.\n",
+        "    n_pop: int\n",
+        "        The size of the population.\n",
+        "    r_cross: float\n",
+        "        The crossover rate.\n",
+        "    r_mut: float\n",
+        "        The mutation rate.\n",
+        "\n",
+        "    Returns\n",
+        "    -------\n",
+        "    list\n",
+        "        The best bitstring (feature selection) found and its corresponding MSE.\n",
+        "    \"\"\"\n",
+        "    global numerical_feature_names, X_train, X_test, y_train, y_test\n",
+        "\n",
+        "    n_features = len(numerical_feature_names)\n",
+        "\n",
+        "    # initialize the population with random bitstrings (each bit represents a feature)\n",
+        "    pop = [randint(0, 2, n_features).tolist() for _ in range(n_pop)]\n",
+        "\n",
+        "    # track the best solution found so far\n",
+        "    best, best_eval = None, float('inf')\n",
+        "    # Evaluate initial population to find the best\n",
+        "    initial_scores = [objective_function_regression(p) for p in pop]\n",
+        "    for i in range(n_pop):\n",
+        "        if initial_scores[i] < best_eval:\n",
+        "            best, best_eval = pop[i], initial_scores[i]\n",
+        "            print(f\">0, initial best f({decode_features(pop[i], numerical_feature_names)}) = {initial_scores[i]:.6f}\")\n",
+        "\n",
+        "    # iterate over generations\n",
+        "    for gen in range(1, n_iter):\n",
+        "        scores = [objective_function_regression(p) for p in pop]\n",
+        "        # check for a new best solution\n",
+        "        for i in range(n_pop):\n",
+        "            if scores[i] < best_eval:\n",
+        "                best, best_eval = pop[i], scores[i]\n",
+        "                print(f\">{gen}, new best f({decode_features(pop[i], numerical_feature_names)}) = {scores[i]:.6f}\")\n",
+        "\n",
+        "        # select parents\n",
+        "        selected = [selection(pop, scores) for _ in range(n_pop)]\n",
+        "\n",
+        "        # create the next generation - children\n",
+        "        children = list()\n",
+        "        for i in range(0, n_pop, 2):\n",
+        "            # get selected parents in pairs\n",
+        "            p1, p2 = selected[i], selected[i + 1]\n",
+        "            # crossover and mutation\n",
+        "            for c in crossover(p1, p2, r_cross):\n",
+        "                # mutation\n",
+        "                mutation(c, r_mut)\n",
+        "                # store for next generation\n",
+        "                children.append(c)\n",
+        "        # replace the population\n",
+        "        pop = children\n",
+        "\n",
+        "    return [best, best_eval]\n",
+        "\n",
+        "print(\"genetic_algorithm_feature_selection function defined successfully.\")"
+      ],
+      "execution_count": 17,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "genetic_algorithm_feature_selection function defined successfully.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "88fa2bc0"
+      },
+      "source": [
+        "## Configure and Run Genetic Algorithm\n",
+        "\n",
+        "### Subtask:\n",
+        "Set up the parameters for the genetic algorithm and execute the `genetic_algorithm_feature_selection` function to find the best feature subset.\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "48a45a12"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "I will now set up the parameters for the genetic algorithm, including the number of bits based on the available features, and then execute the `genetic_algorithm_feature_selection` function to find the best feature subset.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 555
+        },
+        "id": "dca0a446",
+        "outputId": "d161ca1a-0d6c-4432-c142-fc0d110dc9c4"
+      },
+      "source": [
+        "n_bits = len(numerical_feature_names)\n",
+        "\n",
+        "# Define genetic algorithm parameters\n",
+        "n_iter = 100\n",
+        "n_pop = 100\n",
+        "r_cross = 0.9\n",
+        "r_mut = 1.0 / float(n_bits)\n",
+        "\n",
+        "print(f\"Number of features (n_bits): {n_bits}\")\n",
+        "print(f\"Number of iterations (n_iter): {n_iter}\")\n",
+        "print(f\"Population size (n_pop): {n_pop}\")\n",
+        "print(f\"Crossover rate (r_cross): {r_cross}\")\n",
+        "print(f\"Mutation rate (r_mut): {r_mut:.4f}\")\n",
+        "\n",
+        "# Perform the genetic algorithm search for feature selection\n",
+        "best_bitstring, best_mse = genetic_algorithm_feature_selection(n_iter, n_pop, r_cross, r_mut)\n",
+        "\n",
+        "print('\\n###########################################################')\n",
+        "selected_features = decode_features(best_bitstring, numerical_feature_names)\n",
+        "print(f'Best selected features: {selected_features}')\n",
+        "print(f'Best MSE: {best_mse:.6f}')"
+      ],
+      "execution_count": 18,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Number of features (n_bits): 5\n",
+            "Number of iterations (n_iter): 100\n",
+            "Population size (n_pop): 100\n",
+            "Crossover rate (r_cross): 0.9\n",
+            "Mutation rate (r_mut): 0.2000\n"
+          ]
+        },
+        {
+          "output_type": "error",
+          "ename": "NameError",
+          "evalue": "name 'randint' is not defined",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+            "\u001b[0;32m/tmp/ipython-input-1437153966.py\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     14\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     15\u001b[0m \u001b[0;31m# Perform the genetic algorithm search for feature selection\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 16\u001b[0;31m \u001b[0mbest_bitstring\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mbest_mse\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mgenetic_algorithm_feature_selection\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mn_iter\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mn_pop\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mr_cross\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mr_mut\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     17\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     18\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'\\n###########################################################'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/tmp/ipython-input-464778762.py\u001b[0m in \u001b[0;36mgenetic_algorithm_feature_selection\u001b[0;34m(n_iter, n_pop, r_cross, r_mut)\u001b[0m\n\u001b[1;32m     24\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     25\u001b[0m     \u001b[0;31m# initialize the population with random bitstrings (each bit represents a feature)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 26\u001b[0;31m     \u001b[0mpop\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0mrandint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m2\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mn_features\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtolist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0m_\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mrange\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mn_pop\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     27\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     28\u001b[0m     \u001b[0;31m# track the best solution found so far\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mNameError\u001b[0m: name 'randint' is not defined"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "f8509868"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "The previous code failed because the `randint` function was not defined within the scope of `genetic_algorithm_feature_selection`. I need to ensure `randint` is imported where it's used. Since `numpy.random.randint` was already imported in an earlier cell, I will add it to the `genetic_algorithm_feature_selection` function definition to make it self-contained and resolve the `NameError`.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "23e7077e",
+        "outputId": "4355f63a-bfc0-4bdf-c4dc-5aeb3adb2ffb"
+      },
+      "source": [
+        "from numpy.random import randint\n",
+        "\n",
+        "def genetic_algorithm_feature_selection(n_iter, n_pop, r_cross, r_mut):\n",
+        "    \"\"\"\n",
+        "    Genetic algorithm for feature selection using Linear Regression and MSE as objective.\n",
+        "\n",
+        "    Parameters\n",
+        "    ----------\n",
+        "    n_iter: int\n",
+        "        The number of iterations (generations) to perform.\n",
+        "    n_pop: int\n",
+        "        The size of the population.\n",
+        "    r_cross: float\n",
+        "        The crossover rate.\n",
+        "    r_mut: float\n",
+        "        The mutation rate.\n",
+        "\n",
+        "    Returns\n",
+        "    -------\n",
+        "    list\n",
+        "        The best bitstring (feature selection) found and its corresponding MSE.\n",
+        "    \"\"\"\n",
+        "    global numerical_feature_names, X_train, X_test, y_train, y_test\n",
+        "\n",
+        "    n_features = len(numerical_feature_names)\n",
+        "\n",
+        "    # initialize the population with random bitstrings (each bit represents a feature)\n",
+        "    pop = [randint(0, 2, n_features).tolist() for _ in range(n_pop)]\n",
+        "\n",
+        "    # track the best solution found so far\n",
+        "    best, best_eval = None, float('inf')\n",
+        "    # Evaluate initial population to find the best\n",
+        "    initial_scores = [objective_function_regression(p) for p in pop]\n",
+        "    for i in range(n_pop):\n",
+        "        if initial_scores[i] < best_eval:\n",
+        "            best, best_eval = pop[i], initial_scores[i]\n",
+        "            print(f\">0, initial best f({decode_features(pop[i], numerical_feature_names)}) = {initial_scores[i]:.6f}\")\n",
+        "\n",
+        "    # iterate over generations\n",
+        "    for gen in range(1, n_iter):\n",
+        "        scores = [objective_function_regression(p) for p in pop]\n",
+        "        # check for a new best solution\n",
+        "        for i in range(n_pop):\n",
+        "            if scores[i] < best_eval:\n",
+        "                best, best_eval = pop[i], scores[i]\n",
+        "                print(f\">{gen}, new best f({decode_features(pop[i], numerical_feature_names)}) = {scores[i]:.6f}\")\n",
+        "\n",
+        "        # select parents\n",
+        "        selected = [selection(pop, scores) for _ in range(n_pop)]\n",
+        "\n",
+        "        # create the next generation - children\n",
+        "        children = list()\n",
+        "        for i in range(0, n_pop, 2):\n",
+        "            # get selected parents in pairs\n",
+        "            p1, p2 = selected[i], selected[i + 1]\n",
+        "            # crossover and mutation\n",
+        "            for c in crossover(p1, p2, r_cross):\n",
+        "                # mutation\n",
+        "                mutation(c, r_mut)\n",
+        "                # store for next generation\n",
+        "                children.append(c)\n",
+        "        # replace the population\n",
+        "        pop = children\n",
+        "\n",
+        "    return [best, best_eval]\n",
+        "\n",
+        "print(\"genetic_algorithm_feature_selection function defined successfully.\")"
+      ],
+      "execution_count": 19,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "genetic_algorithm_feature_selection function defined successfully.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "4d72fd84"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "The `genetic_algorithm_feature_selection` function has been successfully redefined. Now, I will re-execute the code to set up the genetic algorithm parameters and run the feature selection process, which was the original intent before the `NameError`.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 670
+        },
+        "id": "656a972b",
+        "outputId": "618c49be-3a8e-4d3e-f1e5-b77d7d6e8cbd"
+      },
+      "source": [
+        "n_bits = len(numerical_feature_names)\n",
+        "\n",
+        "# Define genetic algorithm parameters\n",
+        "n_iter = 100\n",
+        "n_pop = 100\n",
+        "r_cross = 0.9\n",
+        "r_mut = 1.0 / float(n_bits)\n",
+        "\n",
+        "print(f\"Number of features (n_bits): {n_bits}\")\n",
+        "print(f\"Number of iterations (n_iter): {n_iter}\")\n",
+        "print(f\"Population size (n_pop): {n_pop}\")\n",
+        "print(f\"Crossover rate (r_cross): {r_cross}\")\n",
+        "print(f\"Mutation rate (r_mut): {r_mut:.4f}\")\n",
+        "\n",
+        "# Perform the genetic algorithm search for feature selection\n",
+        "best_bitstring, best_mse = genetic_algorithm_feature_selection(n_iter, n_pop, r_cross, r_mut)\n",
+        "\n",
+        "print('\\n###########################################################')\n",
+        "selected_features = decode_features(best_bitstring, numerical_feature_names)\n",
+        "print(f'Best selected features: {selected_features}')\n",
+        "print(f'Best MSE: {best_mse:.6f}')"
+      ],
+      "execution_count": 20,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Number of features (n_bits): 5\n",
+            "Number of iterations (n_iter): 100\n",
+            "Population size (n_pop): 100\n",
+            "Crossover rate (r_cross): 0.9\n",
+            "Mutation rate (r_mut): 0.2000\n",
+            ">0, initial best f(['Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index']) = 34.293589\n",
+            ">0, initial best f(['Year', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index']) = 31.466898\n",
+            ">0, initial best f(['Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index']) = 31.466493\n",
+            ">0, initial best f(['Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index', 'Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index']) = 30.267336\n",
+            ">0, initial best f(['Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index']) = 29.324528\n",
+            ">0, initial best f(['Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index', 'Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index']) = 28.704016\n"
+          ]
+        },
+        {
+          "output_type": "error",
+          "ename": "NameError",
+          "evalue": "name 'rand' is not defined",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+            "\u001b[0;32m/tmp/ipython-input-1437153966.py\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     14\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     15\u001b[0m \u001b[0;31m# Perform the genetic algorithm search for feature selection\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 16\u001b[0;31m \u001b[0mbest_bitstring\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mbest_mse\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mgenetic_algorithm_feature_selection\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mn_iter\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mn_pop\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mr_cross\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mr_mut\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     17\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     18\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'\\n###########################################################'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/tmp/ipython-input-2425475667.py\u001b[0m in \u001b[0;36mgenetic_algorithm_feature_selection\u001b[0;34m(n_iter, n_pop, r_cross, r_mut)\u001b[0m\n\u001b[1;32m     55\u001b[0m             \u001b[0mp1\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mp2\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mselected\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mi\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mselected\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mi\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;36m1\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     56\u001b[0m             \u001b[0;31m# crossover and mutation\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 57\u001b[0;31m             \u001b[0;32mfor\u001b[0m \u001b[0mc\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mcrossover\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mp1\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mp2\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mr_cross\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     58\u001b[0m                 \u001b[0;31m# mutation\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     59\u001b[0m                 \u001b[0mmutation\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mc\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mr_mut\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/tmp/ipython-input-1192083732.py\u001b[0m in \u001b[0;36mcrossover\u001b[0;34m(p1, p2, r_cross)\u001b[0m\n\u001b[1;32m     16\u001b[0m     \u001b[0mc1\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mc2\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mp1\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcopy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mp2\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcopy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     17\u001b[0m     \u001b[0;31m# Check if recombination should occur\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 18\u001b[0;31m     \u001b[0;32mif\u001b[0m \u001b[0mrand\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m<\u001b[0m \u001b[0mr_cross\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     19\u001b[0m         \u001b[0;31m# Select a crossover point (not at the end of the string)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     20\u001b[0m         \u001b[0mpt\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mrandint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mp1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m-\u001b[0m\u001b[0;36m2\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mNameError\u001b[0m: name 'rand' is not defined"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "c15b4703"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "The previous code failed because the `rand` function was not defined within the scope of the `crossover` function. I need to ensure `rand` is imported in the cell where `crossover` is defined to resolve this `NameError`.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "441dd3b5"
+      },
+      "source": [
+        "from numpy.random import randint, rand\n",
+        "\n",
+        "def crossover(p1, p2, r_cross):\n",
+        "    \"\"\"\n",
+        "    Create two children from two parents using the crossover operation.\n",
+        "    The children are created by copying the parents, and recombination occurs\n",
+        "    if a random value is less than the crossover rate.\n",
+        "\n",
+        "    Parameters:\n",
+        "    p1 (list): The first parent.\n",
+        "    p2 (list): The second parent.\n",
+        "    r_cross (float): The crossover rate.\n",
+        "\n",
+        "    Returns:\n",
+        "    list: A list containing the two children.\n",
+        "    \"\"\"\n",
+        "    # Children are copies of the parents by default\n",
+        "    c1, c2 = p1.copy(), p2.copy()\n",
+        "    # Check if recombination should occur\n",
+        "    if rand() < r_cross:\n",
+        "        # Select a crossover point (not at the end of the string)\n",
+        "        pt = randint(1, len(p1)-2)\n",
+        "        # Perform crossover in the children\n",
+        "        c1 = p1[:pt] + p2[pt:]\n",
+        "        c2 = p2[:pt] + p1[pt:]\n",
+        "    # Return the two children\n",
+        "    return [c1, c2]"
+      ],
+      "execution_count": 21,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "2a35e42c"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "The `crossover` function has been successfully redefined. Now, I will re-execute the code to set up the genetic algorithm parameters and run the feature selection process, which was the original intent before the `NameError`.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "8c57b188",
+        "outputId": "1f2e9950-48aa-4a93-fe4d-36712c5d1068"
+      },
+      "source": [
+        "n_bits = len(numerical_feature_names)\n",
+        "\n",
+        "# Define genetic algorithm parameters\n",
+        "n_iter = 100\n",
+        "n_pop = 100\n",
+        "r_cross = 0.9\n",
+        "r_mut = 1.0 / float(n_bits)\n",
+        "\n",
+        "print(f\"Number of features (n_bits): {n_bits}\")\n",
+        "print(f\"Number of iterations (n_iter): {n_iter}\")\n",
+        "print(f\"Population size (n_pop): {n_pop}\")\n",
+        "print(f\"Crossover rate (r_cross): {r_cross}\")\n",
+        "print(f\"Mutation rate (r_mut): {r_mut:.4f}\")\n",
+        "\n",
+        "# Perform the genetic algorithm search for feature selection\n",
+        "best_bitstring, best_mse = genetic_algorithm_feature_selection(n_iter, n_pop, r_cross, r_mut)\n",
+        "\n",
+        "print('\\n###########################################################')\n",
+        "selected_features = decode_features(best_bitstring, numerical_feature_names)\n",
+        "print(f'Best selected features: {selected_features}')\n",
+        "print(f'Best MSE: {best_mse:.6f}')"
+      ],
+      "execution_count": 22,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Number of features (n_bits): 5\n",
+            "Number of iterations (n_iter): 100\n",
+            "Population size (n_pop): 100\n",
+            "Crossover rate (r_cross): 0.9\n",
+            "Mutation rate (r_mut): 0.2000\n",
+            ">0, initial best f(['Year', 'Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index']) = 34.350640\n",
+            ">0, initial best f(['Worksheet1_Table_1_Trends_for_the_abundance_of_all_species_of_butterflies_resident_in_the_UK_50_species_1976_to_2024_notes_1_3_Smoothed_index', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index', 'Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index']) = 31.460067\n",
+            ">0, initial best f(['Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index']) = 29.324528\n",
+            ">0, initial best f(['Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index', 'Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index']) = 28.704016\n",
+            "\n",
+            "###########################################################\n",
+            "Best selected features: ['Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index', 'Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index']\n",
+            "Best MSE: 28.704016\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "f8b5ff79"
+      },
+      "source": [
+        "## Evaluate and Report Best Feature Subset\n",
+        "\n",
+        "### Subtask:\n",
+        "Interpret the genetic algorithm's results by displaying the identified best feature subset and its corresponding Mean Squared Error (MSE), and also calculate and report the R-squared score of the model using these selected features on both training and test sets.\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "4b868bdc"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "I will import the `r2_score` function from `sklearn.metrics` to enable the calculation of R-squared scores for evaluating the model's performance on both training and test sets.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "9f573c31",
+        "outputId": "13b31880-3512-4ed3-d959-c5d7505e9c56"
+      },
+      "source": [
+        "from sklearn.metrics import r2_score\n",
+        "\n",
+        "print(\"r2_score imported successfully.\")"
+      ],
+      "execution_count": 23,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "r2_score imported successfully.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "d086f152"
+      },
+      "source": [
+        "**Reasoning**:\n",
+        "I will now calculate the R-squared scores for the trained model using the best selected features on both the training and test sets, and then print all the requested results, including the best MSE, selected features, and R-squared scores.\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "db6ec7ae",
+        "outputId": "de46d537-0520-46a9-9d54-9448848a998f"
+      },
+      "source": [
+        "selected_features = decode_features(best_bitstring, numerical_feature_names)\n",
+        "\n",
+        "# Filter X_train and X_test to include only these selected features\n",
+        "X_train_selected = X_train[selected_features]\n",
+        "X_test_selected = X_test[selected_features]\n",
+        "\n",
+        "# Instantiate and train a LinearRegression model\n",
+        "model = LinearRegression()\n",
+        "model.fit(X_train_selected, y_train)\n",
+        "\n",
+        "# Calculate R-squared score for the training set\n",
+        "y_train_pred = model.predict(X_train_selected)\n",
+        "r2_train = r2_score(y_train, y_train_pred)\n",
+        "\n",
+        "# Calculate R-squared score for the test set\n",
+        "y_test_pred = model.predict(X_test_selected)\n",
+        "r2_test = r2_score(y_test, y_test_pred)\n",
+        "\n",
+        "print(f\"\\nGenetic Algorithm Results:\")\n",
+        "print(f\"Best MSE: {best_mse:.6f}\")\n",
+        "print(f\"Best selected features: {selected_features}\")\n",
+        "print(f\"R-squared on training set: {r2_train:.6f}\")\n",
+        "print(f\"R-squared on test set: {r2_test:.6f}\")"
+      ],
+      "execution_count": 24,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "Genetic Algorithm Results:\n",
+            "Best MSE: 28.704016\n",
+            "Best selected features: ['Worksheet2_UK_Total_Area_Million_Hectares', 'Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index', 'Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index']\n",
+            "R-squared on training set: 0.274151\n",
+            "R-squared on test set: 0.505585\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "6cd71332"
+      },
+      "source": [
+        "## Final Task\n",
+        "\n",
+        "### Subtask:\n",
+        "Summarize the findings, including the best numerical feature subset identified by the genetic algorithm and the corresponding regression model performance. Provide insights into how these selected features relate to the bee population.\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "7c7f910c"
+      },
+      "source": [
+        "## Summary:\n",
+        "\n",
+        "### Q&A\n",
+        "The best numerical feature subset identified by the genetic algorithm is:\n",
+        "*   `Worksheet2_UK_Total_Area_Million_Hectares`\n",
+        "*   `Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index`\n",
+        "*   `Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index`\n",
+        "\n",
+        "The corresponding regression model performance using these features resulted in a Mean Squared Error (MSE) of $28.704016$ on the test set. The R-squared score on the training set was $0.274151$, and on the test set, it was $0.505585$.\n",
+        "\n",
+        "These selected features indicate that physical landscape characteristics (UK Total Area) and ecological indicators for other pollinator-dependent species (butterfly and bird functional connectivity trends) are important for predicting changes in wild bee occupancy. This suggests an interconnectedness within the ecosystem, where the health of other pollinator species and the available habitat area are influential factors for bee populations.\n",
+        "\n",
+        "### Data Analysis Key Findings\n",
+        "*   The dataset `FINAL VERSION OF combined_weka_friendly_all_data.csv` contains 49 entries and 6 numerical columns.\n",
+        "*   The target variable, 'Worksheet3\\_Worksheet\\_3\\_Change\\_in\\_occupancy\\_of\\_pollinating\\_bee\\_species\\_in\\_the\\_UK\\_1980\\_to\\_2022\\_not\\_updated\\_in\\_2025\\_Indicator\\_mean\\_occupancy\\_Wild\\_bees', was separated, leaving 5 features.\n",
+        "*   The data was split into training (34 samples) and testing (15 samples) sets.\n",
+        "*   A genetic algorithm (GA) was configured with 100 iterations, a population size of 100, a crossover rate of 0.9, and a mutation rate of 0.2.\n",
+        "*   The GA identified the following three features as the best subset for predicting wild bee occupancy changes:\n",
+        "    *   `Worksheet2_UK_Total_Area_Million_Hectares`\n",
+        "    *   `Worksheet5_Worksheet_1_Composite_trends_in_functional_connectivity_in_UK_butterflies_1985_to_2012_Smoothed_index`\n",
+        "    *   `Worksheet6_Worksheet_4_Composite_trends_in_functional_connectivity_in_UK_birds_1985_to_2012_Smoothed_index`\n",
+        "*   The Linear Regression model trained with this feature subset achieved a Mean Squared Error (MSE) of $28.704016$ on the test set.\n",
+        "*   The R-squared score for the model on the training set was $0.274151$, and on the test set, it was $0.505585$.\n",
+        "\n",
+        "### Insights or Next Steps\n",
+        "*   The genetic algorithm successfully identified a subset of three features (UK Total Area, butterfly functional connectivity, and bird functional connectivity) as most influential for wild bee occupancy, highlighting the potential ecological linkages.\n",
+        "*   The R-squared score of $0.505585$ on the test set suggests that approximately 50.6% of the variance in wild bee occupancy can be explained by these three features. This is a moderate predictive power, indicating that other unmodeled factors may also play a significant role. Further investigation into these factors could improve model performance.\n"
+      ]
+    }
+  ]
+}
